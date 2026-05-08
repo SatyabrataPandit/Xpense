@@ -157,7 +157,7 @@ export default function LoginPage() {
             </div>
             <div className="shrink-0">
               <span className="text-[10px] sm:text-[11px] font-bold text-indigo-500/40 tracking-widest uppercase">
-                V2.1.0
+                V5.2.3
               </span>
             </div>
           </div>

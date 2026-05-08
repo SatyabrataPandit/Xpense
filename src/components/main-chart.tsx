@@ -2,108 +2,188 @@
 
 import { useState, useEffect } from 'react';
 import { db, auth } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
-import { TrendingUp, MoreHorizontal } from "lucide-react";
+import { collection, query, orderBy, onSnapshot, where, Timestamp } from 'firebase/firestore';
+import {
+    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+} from 'recharts';
+import { TrendingUp, ArrowUpRight, ArrowDownLeft, Calendar } from 'lucide-react';
+
+type TransactionDirection = 'in' | 'out';
+
+interface Transaction {
+    date?: Timestamp;
+    direction?: TransactionDirection;
+    amount?: number;
+}
+
+interface DataPoint {
+    date: string;
+    income: number;
+    expense: number;
+}
+
+interface TooltipPayloadItem {
+    payload: DataPoint;
+    value: number;
+}
+
+interface CustomTooltipProps {
+    active?: boolean;
+    payload?: TooltipPayloadItem[];
+}
 
 export function MainChart() {
-    const [points, setPoints] = useState<string>("0,200 700,200");
-    const [fillPoints, setFillPoints] = useState<string>("0,200 700,200 700,200 0,200");
-    const [maxVal, setMaxVal] = useState("100k");
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const [data, setData] = useState<DataPoint[]>([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const user = auth.currentUser;
         if (!user) return;
 
-        // Get transactions from the last 7 days
+        // Fetch last 7 days of data
         const oneWeekAgo = new Date();
         oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
         const q = query(
             collection(db, 'users', user.uid, 'transactions'),
-            where('date', '>=', Timestamp.fromDate(oneWeekAgo))
+            where('date', '>=', Timestamp.fromDate(oneWeekAgo)),
+            orderBy('date', 'asc')
         );
 
         const unsub = onSnapshot(q, (snapshot) => {
-            const dailyTotals = [0, 0, 0, 0, 0, 0, 0]; // Mon to Sun
+            // Initialize an empty map for each day of the week
+            const chartMap: Record<string, DataPoint> = {};
+            const today = new Date();
 
-            snapshot.docs.forEach(doc => {
-                const data = doc.data();
-                const date = data.date?.toDate();
-                if (date) {
-                    const dayIndex = (date.getDay() + 6) % 7; // Adjust Sunday=0 to be the end
-                    if (data.type === 'income') dailyTotals[dayIndex] += data.amount;
-                    else dailyTotals[dayIndex] -= data.amount;
+            // Create entries for the last 7 days
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(today.getDate() - i);
+                const label = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+                chartMap[label] = { date: label, income: 0, expense: 0 };
+            }
+
+            snapshot.docs.forEach((doc) => {
+                const tx = doc.data() as Transaction;
+                const dateLabel = tx.date?.toDate().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+
+                if (dateLabel && chartMap[dateLabel]) {
+                    if (tx.direction === 'in') chartMap[dateLabel].income += tx.amount ?? 0;
+                    else chartMap[dateLabel].expense += tx.amount ?? 0;
                 }
             });
 
-            // --- THE FORMULA SECTION ---
-            const svgWidth = 700;
-            const svgHeight = 200;
-            const padding = 20;
-            const chartHeight = svgHeight - padding;
-
-            const absoluteValues = dailyTotals.map(Math.abs);
-            const highest = Math.max(...absoluteValues, 1000); // Default min 1000
-            setMaxVal(`${(highest / 1000).toFixed(0)}k`);
-
-            const coords = dailyTotals.map((val, i) => {
-                const x = (i * (svgWidth / (dailyTotals.length - 1)));
-                // Formula: height - (value / max * height)
-                const y = chartHeight - (Math.abs(val) / highest * chartHeight) + padding;
-                return { x, y };
-            });
-
-            // Generate SVG Path String (L = Line to)
-            const pathLine = coords.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
-            const pathArea = `${pathLine} V${svgHeight} H0 Z`;
-
-            setPoints(pathLine);
-            setFillPoints(pathArea);
+            setData(Object.values(chartMap));
+            setLoading(false);
         });
 
         return () => unsub();
     }, []);
 
+    if (loading) return (
+        <div className="h-112.5 w-full bg-slate-50 dark:bg-slate-900 animate-pulse rounded-[3rem]" />
+    );
+
     return (
-        <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm h-125 flex flex-col relative overflow-hidden transition-colors">
-            <div className="flex items-center justify-between mb-8">
+        <div className="bg-white dark:bg-slate-900 p-8 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden">
+
+            {/* Visual Branding */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12 relative z-10">
                 <div>
-                    <div className="flex items-center gap-2 text-emerald-600 mb-1">
-                        <TrendingUp size={16} />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Live Activity</span>
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className="p-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 rounded-xl">
+                            <TrendingUp size={18} />
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Cash Flow Engine</span>
                     </div>
-                    <h3 className="text-xl font-black text-slate-800 dark:text-slate-100">Cash Flow Trend</h3>
+                    <h2 className="text-3xl font-black text-slate-800 dark:text-white tracking-tighter">Financial Growth</h2>
                 </div>
-                <button className="p-2 text-slate-400"><MoreHorizontal size={20} /></button>
+
+                <div className="flex gap-4">
+                    <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Inflow</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-rose-500" />
+                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Outflow</span>
+                    </div>
+                </div>
             </div>
 
-            <div className="flex-1 relative mt-4">
-                <div className="absolute left-0 h-full flex flex-col justify-between text-[10px] font-black text-slate-200 dark:text-slate-700 pb-10">
-                    <span>{maxVal}</span><span>0</span>
-                </div>
-
-                <div className="ml-12 h-full relative">
-                    <svg className="absolute inset-0 w-full h-[calc(100%-40px)]" preserveAspectRatio="none" viewBox="0 0 700 200">
+            <div className="h-75 w-full relative z-10">
+                <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={data}>
                         <defs>
-                            <linearGradient id="liveGradient" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="#6366f1" stopOpacity="0.2" />
-                                <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
+                            <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                            </linearGradient>
+                            <linearGradient id="expenseGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} />
+                                <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
                             </linearGradient>
                         </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis
+                            dataKey="date"
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fontSize: 10, fontWeight: '900', fill: '#94a3b8' }}
+                            dy={15}
+                        />
+                        <YAxis hide domain={['auto', 'auto']} />
+                        <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#6366f1', strokeWidth: 2, strokeDasharray: '5 5' }} />
 
-                        {/* Rendered using calculated state */}
-                        <path d={fillPoints} fill="url(#liveGradient)" className="transition-all duration-700 ease-in-out" />
-                        <path d={points} fill="none" stroke="#6366f1" strokeWidth="4" strokeLinecap="round" className="transition-all duration-700 ease-in-out" />
-                    </svg>
-                </div>
-            </div>
+                        <Area
+                            type="monotone"
+                            dataKey="income"
+                            stroke="#10b981"
+                            strokeWidth={4}
+                            fillOpacity={1}
+                            fill="url(#incomeGradient)"
+                            animationDuration={1500}
+                        />
 
-            <div className="flex justify-between ml-20 mt-4">
-                {days.map(day => (
-                    <span key={day} className="text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase">{day}</span>
-                ))}
+                        <Area
+                            type="monotone"
+                            dataKey="expense"
+                            stroke="#f43f5e"
+                            strokeWidth={4}
+                            fillOpacity={1}
+                            fill="url(#expenseGradient)"
+                            animationDuration={1500}
+                        />
+                    </AreaChart>
+                </ResponsiveContainer>
             </div>
         </div>
     );
 }
+
+const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
+    if (active && payload && payload.length) {
+        return (
+            <div className="bg-slate-900 text-white p-5 rounded-2xl shadow-2xl border border-white/10 backdrop-blur-md">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2">
+                    <Calendar size={12} /> {payload[0].payload.date}
+                </p>
+                <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-8">
+                        <span className="text-xs font-bold text-emerald-400 flex items-center gap-2">
+                            <ArrowDownLeft size={14} /> Inflow
+                        </span>
+                        <span className="text-sm font-black">₹{payload[0].value.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-8">
+                        <span className="text-xs font-bold text-rose-400 flex items-center gap-2">
+                            <ArrowUpRight size={14} /> Outflow
+                        </span>
+                        <span className="text-sm font-black">₹{payload[1].value.toLocaleString('en-IN')}</span>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+    return null;
+};

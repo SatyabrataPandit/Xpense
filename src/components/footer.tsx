@@ -17,7 +17,7 @@ export function Footer() {
                 {/* 2. Middle Section: Version Tag */}
                 <div className="flex justify-center order-first md:order-0">
                     <span className="text-[9px] font-black text-indigo-500/60 dark:text-indigo-400/60 tracking-[0.3em] uppercase bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1 rounded-full border border-indigo-100 dark:border-indigo-800">
-                        V2.1.0
+                        V5.2.3
                     </span>
                 </div>
 
