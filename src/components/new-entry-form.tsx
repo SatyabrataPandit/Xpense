@@ -6,6 +6,7 @@ import { doc, collection, runTransaction, serverTimestamp } from 'firebase/fires
 import { useRouter } from 'next/navigation';
 import { Save, ArrowLeft, Loader2, ChevronDown, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
+import { toast } from "sonner"; // 1. Added toast import
 
 export function NewEntryForm() {
     const router = useRouter();
@@ -21,7 +22,6 @@ export function NewEntryForm() {
     const [isCatOpen, setIsCatOpen] = useState(false);
 
     const accountTypes = ['wallet', 'bank', 'investment'] as const;
-
     const categories = ["Foods", "Beverage", "Travel", "Grocery", "Clothing", "Transaction", "SIP", "Others"];
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -29,14 +29,17 @@ export function NewEntryForm() {
         const user = auth.currentUser;
         if (!user || !amount) return;
         setIsSubmitting(true);
+        
         try {
             await runTransaction(db, async (transaction) => {
                 const totalsRef = doc(db, 'users', user.uid, 'summary', 'totals');
                 const totalsDoc = await transaction.get(totalsRef);
                 if (!totalsDoc.exists()) throw "Totals document does not exist!";
+                
                 const numAmount = parseFloat(amount);
                 const currentData = totalsDoc.data();
                 const newTotals = { ...currentData };
+                
                 if (type === 'investment') {
                     if (direction === 'in') { newTotals.investments.balance += numAmount; newTotals.investments.profit += numAmount; }
                     else { newTotals.investments.balance -= numAmount; newTotals.investments.loss += numAmount; }
@@ -44,12 +47,40 @@ export function NewEntryForm() {
                     if (direction === 'in') { newTotals[type].balance += numAmount; newTotals[type].credit += numAmount; }
                     else { newTotals[type].balance -= numAmount; newTotals[type].debit += numAmount; }
                 }
+
                 const txRef = doc(collection(db, 'users', user.uid, 'transactions'));
-                transaction.set(txRef, { description, subDescription, category, amount: numAmount, accountType: type, direction, date: new Date(date), createdAt: serverTimestamp() });
+                transaction.set(txRef, { 
+                    description, 
+                    subDescription, 
+                    category, 
+                    amount: numAmount, 
+                    accountType: type, 
+                    direction, 
+                    date: new Date(date), 
+                    createdAt: serverTimestamp() 
+                });
                 transaction.update(totalsRef, newTotals);
             });
-            router.push('/');
-        } catch (error) { console.error(error); alert("Error saving entry."); } finally { setIsSubmitting(false); }
+
+            // 2. Success Toast
+            toast.success("Transaction Success", {
+                description: `${description} added to ${type} successfully.`,
+            });
+
+            // Small delay to let the user see the toast before redirecting
+            setTimeout(() => {
+                router.push('/');
+            }, 1000);
+
+        } catch (error) { 
+            console.error(error); 
+            // 3. Error Toast
+            toast.error("Failed to save", {
+                description: "Something went wrong with the database sync.",
+            });
+        } finally { 
+            setIsSubmitting(false); 
+        }
     };
 
     return (
@@ -129,7 +160,6 @@ export function NewEntryForm() {
                             {isSubmitting ? 'Syncing...' : 'Save Transaction'}
                         </button>
 
-                        {/* Awesome Security Footer Tag */}
                         <div className="flex items-center justify-center gap-2 text-slate-300 dark:text-slate-700">
                             <ShieldCheck size={12} />
                             <p className="text-[9px] font-black uppercase tracking-[0.25em]">

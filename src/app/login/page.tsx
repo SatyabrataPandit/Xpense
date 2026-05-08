@@ -2,12 +2,28 @@
 
 import { useState, useEffect } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase'; // Added db
+import { doc, getDoc, setDoc } from 'firebase/firestore'; // Added Firestore tools
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { toast } from "sonner";
+
+// --- NEW: INITIALIZATION HELPER ---
+const initializeUserTotals = async (userId: string) => {
+  const totalsRef = doc(db, 'users', userId, 'summary', 'totals');
+  const totalsSnap = await getDoc(totalsRef);
+
+  // If the "totals" ledger doesn't exist, create it with 0 values
+  if (!totalsSnap.exists()) {
+    await setDoc(totalsRef, {
+      wallet: { balance: 0, credit: 0, debit: 0 },
+      bank: { balance: 0, credit: 0, debit: 0 },
+      investments: { balance: 0, profit: 0, loss: 0 }
+    });
+  }
+};
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -30,9 +46,13 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      // --- DATABASE SYNC: Ensure the ledger exists ---
+      await initializeUserTotals(userCredential.user.uid);
+
       toast.success("Welcome back!", {
-        description: "You have logged in successfully.",
+        description: "Dashboard is ready.",
       });
       router.push('/');
     } catch (error: unknown) {
@@ -55,14 +75,12 @@ export default function LoginPage() {
   if (!mounted) return <div className="min-h-screen bg-white" />;
 
   return (
-    // Changed: Added flex-col to stack on mobile, flex-row for desktop
     <div className="flex flex-col lg:flex-row min-h-screen bg-white overflow-x-hidden">
       
       {/* Branding Panel */}
       <motion.div 
         layoutId="auth-panel"
         transition={{ type: "spring", stiffness: 100, damping: 20 }}
-        // Changed: Removed 'hidden', added responsive padding and width
         className="w-full lg:w-1/2 bg-indigo-600 flex items-center justify-center p-10 lg:p-12 text-white relative z-10"
       >
         <div className="max-w-md text-center lg:text-left">
@@ -75,17 +93,16 @@ export default function LoginPage() {
 
       {/* Right Panel - Form */}
       <motion.div 
-        initial={{ opacity: 0, y: 20 }} // Changed: x to y for a better mobile entry
+        initial={{ opacity: 0, y: 20 }} 
         animate={{ opacity: 1, y: 0 }} 
         className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white relative z-20 grow"
       >
-        {/* Changed: Added bottom padding pb-24 so the form doesn't hit the absolute footer on small screens */}
         <div className="w-full max-w-md pb-24 lg:pb-0">
           <h2 className="text-3xl font-bold text-slate-800 mb-2">Welcome Back</h2>
           <p className="text-slate-500 mb-8 font-medium">Sign in to manage your budget.</p>
 
           <form onSubmit={handleLogin} className="space-y-5">
-            <div className="space-y-1">
+            <div className="space-y-1 text-left">
               <label className="text-sm font-semibold text-slate-700">Email Address</label>
               <input 
                 type="email" 
@@ -96,7 +113,7 @@ export default function LoginPage() {
               />
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-1 text-left">
               <label className="text-sm font-semibold text-slate-700">Password</label>
               <div className="relative">
                 <input 
@@ -136,7 +153,6 @@ export default function LoginPage() {
             <div className="flex-1">
               <p className="text-[10px] sm:text-[11px] uppercase tracking-wider text-slate-400 font-medium whitespace-nowrap">
                 &copy; {currentYear} <span className="font-bold text-slate-600">Dynotech Products</span>
-                <span className="hidden md:inline">. All rights reserved.</span>
               </p>
             </div>
             <div className="shrink-0">
