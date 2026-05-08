@@ -55,26 +55,32 @@ export default function LoginPage() {
   if (!mounted) return <div className="min-h-screen bg-white" />;
 
   return (
-    <div className="flex min-h-screen bg-white overflow-hidden">
-      {/* Left Panel */}
+    // Changed: Added flex-col to stack on mobile, flex-row for desktop
+    <div className="flex flex-col lg:flex-row min-h-screen bg-white overflow-x-hidden">
+      
+      {/* Branding Panel */}
       <motion.div 
         layoutId="auth-panel"
         transition={{ type: "spring", stiffness: 100, damping: 20 }}
-        className="hidden lg:flex lg:w-1/2 bg-indigo-600 items-center justify-center p-12 text-white relative z-10"
+        // Changed: Removed 'hidden', added responsive padding and width
+        className="w-full lg:w-1/2 bg-indigo-600 flex items-center justify-center p-10 lg:p-12 text-white relative z-10"
       >
-        <div className="max-w-md">
-          <h1 className="text-5xl font-bold italic tracking-tighter">Xpense.</h1>
-          <p className="text-xl text-indigo-100 mt-4 font-light">Track your wealth, one click at a time.</p>
+        <div className="max-w-md text-center lg:text-left">
+          <h1 className="text-4xl lg:text-5xl font-bold italic tracking-tighter">Xpense.</h1>
+          <p className="text-lg lg:text-xl text-indigo-100 mt-2 lg:mt-4 font-light">
+            Track your wealth, one click at a time.
+          </p>
         </div>
       </motion.div>
 
-      {/* Right Panel - Form (ADDED 'relative' and 'z-20' HERE) */}
+      {/* Right Panel - Form */}
       <motion.div 
-        initial={{ opacity: 0, x: 20 }} 
-        animate={{ opacity: 1, x: 0 }} 
-        className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white relative z-20"
+        initial={{ opacity: 0, y: 20 }} // Changed: x to y for a better mobile entry
+        animate={{ opacity: 1, y: 0 }} 
+        className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white relative z-20 grow"
       >
-        <div className="w-full max-w-md">
+        {/* Changed: Added bottom padding pb-24 so the form doesn't hit the absolute footer on small screens */}
+        <div className="w-full max-w-md pb-24 lg:pb-0">
           <h2 className="text-3xl font-bold text-slate-800 mb-2">Welcome Back</h2>
           <p className="text-slate-500 mb-8 font-medium">Sign in to manage your budget.</p>
 
@@ -124,7 +130,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* --- FIXED FOOTER INTEGRATION --- */}
+        {/* Footer */}
         <div className="absolute bottom-6 left-0 w-full px-8">
           <div className="flex flex-row justify-between items-center pt-4 border-t border-slate-100 w-full">
             <div className="flex-1">

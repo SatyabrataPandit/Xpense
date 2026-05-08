@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { FirebaseError } from 'firebase/app';
 import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -57,13 +58,7 @@ export default function RegisterPage() {
           ? err.message
           : "Registration failed. Please try again.";
 
-      if (
-        typeof err === 'object' &&
-        err !== null &&
-        'code' in err &&
-        typeof (err as Record<string, unknown>).code === 'string' &&
-        (err as Record<string, unknown>).code === 'auth/email-already-in-use'
-      ) {
+      if (err instanceof FirebaseError && err.code === 'auth/email-already-in-use') {
         toast.error("Registration Error", {
           description: "This email is already registered."
         });
@@ -80,26 +75,32 @@ export default function RegisterPage() {
   if (!mounted) return <div className="min-h-screen bg-white" />;
 
   return (
-    <div className="flex flex-row-reverse min-h-screen bg-white overflow-hidden">
+    // Changed: Uses flex-col for mobile and flex-row-reverse for desktop
+    <div className="flex flex-col lg:flex-row-reverse min-h-screen bg-white overflow-x-hidden">
+      
       {/* Branding Panel */}
       <motion.div 
         layoutId="auth-panel"
         transition={{ type: "spring", stiffness: 100, damping: 20 }}
-        className="hidden lg:flex lg:w-1/2 bg-indigo-600 items-center justify-center p-12 text-white relative z-10"
+        // Changed: Removed 'hidden', added responsive padding
+        className="w-full lg:w-1/2 bg-indigo-600 flex items-center justify-center p-10 lg:p-12 text-white relative z-10"
       >
-        <div className="max-w-md">
-          <h1 className="text-5xl font-bold italic tracking-tighter">Xpense.</h1>
-          <p className="text-xl text-indigo-100 mt-4 font-light">Join us to start your financial journey.</p>
+        <div className="max-w-md text-center lg:text-left">
+          <h1 className="text-4xl lg:text-5xl font-bold italic tracking-tighter">Xpense.</h1>
+          <p className="text-lg lg:text-xl text-indigo-100 mt-2 lg:mt-4 font-light">
+            Join us to start your financial journey.
+          </p>
         </div>
       </motion.div>
 
-      {/* Form Panel (Added 'relative' and 'z-20') */}
+      {/* Form Panel */}
       <motion.div 
-        initial={{ opacity: 0, x: -20 }} 
-        animate={{ opacity: 1, x: 0 }} 
-        className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white relative z-20"
+        initial={{ opacity: 0, y: 20 }} // Changed: Animated on Y axis for mobile
+        animate={{ opacity: 1, y: 0 }} 
+        className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white relative z-20 grow"
       >
-        <div className="w-full max-w-md">
+        {/* Changed: Added pb-24 to avoid footer overlap on mobile */}
+        <div className="w-full max-w-md pb-24 lg:pb-0">
           <h2 className="text-3xl font-bold text-slate-800 mb-2">Create Account</h2>
           <p className="text-slate-500 mb-8 font-medium">Sign up in seconds.</p>
 
@@ -180,7 +181,7 @@ export default function RegisterPage() {
           </p>
         </div>
 
-        {/* --- FIXED FOOTER INTEGRATION --- */}
+        {/* Footer */}
         <div className="absolute bottom-6 left-0 w-full px-8">
           <div className="flex flex-row justify-between items-center pt-4 border-t border-slate-100 w-full">
             <div className="flex-1">
