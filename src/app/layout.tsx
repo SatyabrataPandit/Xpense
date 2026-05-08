@@ -34,7 +34,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
             <Toaster position="top-center" 
               richColors 
-              closeButton 
               expand={false} />
           </AuthContextProvider>
         </ThemeProvider>
