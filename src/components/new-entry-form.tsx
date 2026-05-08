@@ -6,7 +6,7 @@ import { doc, collection, runTransaction, serverTimestamp } from 'firebase/fires
 import { useRouter } from 'next/navigation';
 import { Save, ArrowLeft, Loader2, ChevronDown, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
-import { toast } from "sonner"; // 1. Added toast import
+import { toast } from "sonner";
 
 export function NewEntryForm() {
     const router = useRouter();
@@ -62,19 +62,16 @@ export function NewEntryForm() {
                 transaction.update(totalsRef, newTotals);
             });
 
-            // 2. Success Toast
             toast.success("Transaction Success", {
                 description: `${description} added to ${type} successfully.`,
             });
 
-            // Small delay to let the user see the toast before redirecting
             setTimeout(() => {
                 router.push('/');
             }, 1000);
 
         } catch (error) { 
             console.error(error); 
-            // 3. Error Toast
             toast.error("Failed to save", {
                 description: "Something went wrong with the database sync.",
             });
@@ -84,7 +81,7 @@ export function NewEntryForm() {
     };
 
     return (
-        <div className="max-w-5xl mx-auto h-[calc(100vh-200px)] flex flex-col justify-center transition-colors">
+        <div className="max-w-5xl mx-auto h-auto md:h-[calc(100vh-200px)] flex flex-col justify-center transition-colors px-4 md:px-0">
 
             {/* Header */}
             <div className="flex items-center justify-between mb-8">
@@ -95,7 +92,7 @@ export function NewEntryForm() {
                 <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-xl">
                     {accountTypes.map((t) => (
                         <button key={t} type="button" onClick={() => setType(t)}
-                            className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${type === t ? 'bg-white dark:bg-slate-800 text-indigo-600 shadow-sm' : 'text-slate-400'}`}>
+                            className={`px-3 md:px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${type === t ? 'bg-white dark:bg-slate-800 text-indigo-600 shadow-sm' : 'text-slate-400'}`}>
                             {t}
                         </button>
                     ))}
@@ -104,25 +101,32 @@ export function NewEntryForm() {
 
             <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
 
-                {/* Left Section */}
-                <div className="md:col-span-5 space-y-6">
-                    <div className="relative">
+                {/* Left Section - Centered on Mobile */}
+                <div className="md:col-span-5 flex flex-col items-center md:items-start space-y-8">
+                    <div className="relative w-full text-center md:text-left">
                         <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 dark:text-slate-700 mb-2 block">Amount</label>
-                        <div className="flex items-baseline gap-2">
+                        <div className="flex items-baseline justify-center md:justify-start gap-2">
                             <span className="text-3xl font-black text-indigo-500">₹</span>
-                            <input required type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00"
-                                className="bg-transparent text-7xl md:text-8xl font-black text-slate-900 dark:text-white outline-none w-full placeholder:text-slate-200 dark:placeholder:text-slate-800 placeholder:font-bold" />
+                            <input 
+                                required 
+                                type="number" 
+                                value={amount} 
+                                onChange={(e) => setAmount(e.target.value)} 
+                                placeholder="0.00"
+                                className="bg-transparent text-6xl md:text-8xl font-black text-slate-900 dark:text-white outline-none w-full max-w-70 md:max-w-full text-center md:text-left placeholder:text-slate-200 dark:placeholder:text-slate-800 placeholder:font-bold" 
+                            />
                         </div>
                     </div>
 
-                    <div className="flex gap-2">
-                        <button type="button" onClick={() => setDirection('in')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border-2 ${direction === 'in' ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-100 dark:border-slate-800 text-slate-400'}`}>{type === 'investment' ? 'Profit' : 'Credit'}</button>
-                        <button type="button" onClick={() => setDirection('out')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border-2 ${direction === 'out' ? 'bg-rose-500 border-rose-500 text-white' : 'border-slate-100 dark:border-slate-800 text-slate-400'}`}>{type === 'investment' ? 'Loss' : 'Debit'}</button>
+                    {/* Centered Credit/Debit Buttons */}
+                    <div className="flex gap-2 w-full max-w-sm md:max-w-full">
+                        <button type="button" onClick={() => setDirection('in')} className={`flex-1 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border-2 ${direction === 'in' ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg' : 'border-slate-100 dark:border-slate-800 text-slate-400'}`}>{type === 'investment' ? 'Profit' : 'Credit'}</button>
+                        <button type="button" onClick={() => setDirection('out')} className={`flex-1 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border-2 ${direction === 'out' ? 'bg-rose-500 border-rose-500 text-white shadow-lg' : 'border-slate-100 dark:border-slate-800 text-slate-400'}`}>{type === 'investment' ? 'Loss' : 'Debit'}</button>
                     </div>
                 </div>
 
-                {/* Right Section */}
-                <div className="md:col-span-7 grid grid-cols-2 gap-x-8 gap-y-6 border-l border-slate-100 dark:border-slate-900 pl-8">
+                {/* Right Section - Grid inputs */}
+                <div className="md:col-span-7 grid grid-cols-2 gap-x-8 gap-y-6 border-l-0 md:border-l border-slate-100 dark:border-slate-900 px-0 md:pl-8">
 
                     <div className="relative">
                         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2 block">Category</label>

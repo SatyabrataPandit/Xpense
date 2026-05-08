@@ -33,7 +33,7 @@ export default function Page() {
   // Premium Loading Screen (Matches your Dashboard design)
   if (loading) return (
     <div className="h-screen w-full flex flex-col items-center justify-center bg-white dark:bg-slate-950">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-indigo-600 border-slate-200 dark:border-slate-800" />
+      <div className="animate-spin rounded-full h-12 w-12 border border-slate-200 border-t-4 border-t-indigo-600 dark:border-slate-800" />
       <p className="mt-4 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 animate-pulse">
         Securing Session...
       </p>
