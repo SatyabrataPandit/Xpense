@@ -10,7 +10,7 @@ import * as XLSX from 'xlsx';
 import {
     Trash2, ArrowLeft, Search, Download, Loader2, 
     Utensils, Car, ShoppingBag, TrendingUp, 
-    IndianRupee, Ghost, ChevronDown, Filter, FileSpreadsheet, X
+    IndianRupee, Ghost, ChevronDown, Filter, FileSpreadsheet, X,
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from "sonner";
@@ -38,6 +38,10 @@ export default function HistoryPage() {
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     
+    // UI States for Custom Dropdowns
+    const [isAssetOpen, setIsAssetOpen] = useState(false);
+    const [isFlowOpen, setIsFlowOpen] = useState(false);
+
     const [deleteId, setDeleteId] = useState<Transaction | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
@@ -119,7 +123,6 @@ export default function HistoryPage() {
         } catch (e) { toast.error("Error voiding entry"); } finally { setIsDeleting(false); }
     };
 
-    // UI FIX: Reset all filters function
     const resetAllFilters = () => {
         setSearchTerm("");
         setFilterType("all");
@@ -139,6 +142,20 @@ export default function HistoryPage() {
         }
     };
 
+    // Options for Custom Selects
+    const assetOptions = [
+        { id: 'all', label: 'All Assets' },
+        { id: 'wallet', label: 'Wallet' },
+        { id: 'bank', label: 'Bank Account' },
+        { id: 'investment', label: 'Investments' }
+    ];
+
+    const flowOptions = [
+        { id: 'all', label: 'All Flows' },
+        { id: 'in', label: 'Inflow (Credit)' },
+        { id: 'out', label: 'Outflow (Debit)' }
+    ];
+
     if (loading) return (
         <div className="h-screen flex items-center justify-center bg-white dark:bg-slate-950">
             <Loader2 className="animate-spin text-indigo-600" size={32} />
@@ -151,7 +168,6 @@ export default function HistoryPage() {
 
             <main className="flex-1 flex flex-col max-w-5xl w-full mx-auto p-4 lg:p-8 overflow-hidden">
                 
-                {/* FIXED TOP SECTION */}
                 <div className="flex-none">
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
                         <div className="space-y-1">
@@ -172,9 +188,9 @@ export default function HistoryPage() {
                         </div>
                     </div>
 
-                    {/* MODERN FILTER BAR */}
                     <div className="bg-white dark:bg-slate-900 p-5 rounded-[2rem] border border-slate-200/60 dark:border-slate-800 shadow-sm mb-6">
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                            
                             {/* Search */}
                             <div className="md:col-span-4 relative group">
                                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={16} />
@@ -187,31 +203,57 @@ export default function HistoryPage() {
                                 />
                             </div>
 
-                            {/* Dropdowns */}
+                            {/* Custom Dropdowns Replacement */}
                             <div className="md:col-span-4 grid grid-cols-2 gap-3">
+                                
+                                {/* Asset Custom Select */}
                                 <div className="relative">
-                                    <select 
-                                        value={filterType} onChange={(e) => setFilterType(e.target.value)}
-                                        className="w-full appearance-none pl-4 pr-10 py-3 bg-slate-50 dark:bg-slate-800/50 border border-transparent rounded-2xl text-[10px] font-bold uppercase tracking-tight text-slate-600 dark:text-slate-300 outline-none cursor-pointer focus:ring-1 ring-indigo-500/30 transition-all"
+                                    <button 
+                                        onClick={() => { setIsAssetOpen(!isAssetOpen); setIsFlowOpen(false); }}
+                                        className="w-full flex items-center justify-between pl-4 pr-3 py-3 bg-slate-50 dark:bg-slate-800/50 border border-transparent rounded-2xl text-[10px] font-bold uppercase tracking-tight text-slate-600 dark:text-slate-300 outline-none transition-all"
                                     >
-                                        <option value="all">All Assets</option>
-                                        <option value="wallet">Wallet</option>
-                                        <option value="bank">Bank Account</option>
-                                        <option value="investment">Investments</option>
-                                    </select>
-                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
+                                        <span className="truncate">{assetOptions.find(o => o.id === filterType)?.label}</span>
+                                        <ChevronDown size={14} className={`text-slate-400 transition-transform ${isAssetOpen ? 'rotate-180' : ''}`} />
+                                    </button>
+                                    
+                                    {isAssetOpen && (
+                                        <div className="absolute top-full left-0 w-full mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-1.5 shadow-2xl z-50 animate-in fade-in zoom-in-95">
+                                            {assetOptions.map(opt => (
+                                                <button 
+                                                    key={opt.id} 
+                                                    onClick={() => { setFilterType(opt.id); setIsAssetOpen(false); }}
+                                                    className={`w-full text-left px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-tight transition-colors ${filterType === opt.id ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/40' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500'}`}
+                                                >
+                                                    {opt.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
 
+                                {/* Flow Custom Select */}
                                 <div className="relative">
-                                    <select 
-                                        value={filterFlow} onChange={(e) => setFilterFlow(e.target.value)}
-                                        className="w-full appearance-none pl-4 pr-10 py-3 bg-slate-50 dark:bg-slate-800/50 border border-transparent rounded-2xl text-[10px] font-bold uppercase tracking-tight text-slate-600 dark:text-slate-300 outline-none cursor-pointer focus:ring-1 ring-indigo-500/30 transition-all"
+                                    <button 
+                                        onClick={() => { setIsFlowOpen(!isFlowOpen); setIsAssetOpen(false); }}
+                                        className="w-full flex items-center justify-between pl-4 pr-3 py-3 bg-slate-50 dark:bg-slate-800/50 border border-transparent rounded-2xl text-[10px] font-bold uppercase tracking-tight text-slate-600 dark:text-slate-300 outline-none transition-all"
                                     >
-                                        <option value="all">All Flows</option>
-                                        <option value="in">Inflow (Credit)</option>
-                                        <option value="out">Outflow (Debit)</option>
-                                    </select>
-                                    <Filter className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={12} />
+                                        <span className="truncate">{flowOptions.find(o => o.id === filterFlow)?.label}</span>
+                                        <Filter size={12} className={`text-slate-400 transition-transform ${isFlowOpen ? 'scale-110 text-indigo-500' : ''}`} />
+                                    </button>
+
+                                    {isFlowOpen && (
+                                        <div className="absolute top-full left-0 w-full mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-1.5 shadow-2xl z-50 animate-in fade-in zoom-in-95">
+                                            {flowOptions.map(opt => (
+                                                <button 
+                                                    key={opt.id} 
+                                                    onClick={() => { setFilterFlow(opt.id); setIsFlowOpen(false); }}
+                                                    className={`w-full text-left px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-tight transition-colors ${filterFlow === opt.id ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/40' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500'}`}
+                                                >
+                                                    {opt.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -229,7 +271,6 @@ export default function HistoryPage() {
                                     />
                                 </div>
                                 
-                                {/* UI FIX: This button now resets EVERYTHING */}
                                 <button 
                                     onClick={resetAllFilters}
                                     title="Reset All Filters"
@@ -242,7 +283,6 @@ export default function HistoryPage() {
                     </div>
                 </div>
 
-                {/* SCROLLABLE LIST AREA */}
                 <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3 pb-32">
                     {filteredData.length > 0 ? (
                         filteredData.map((tx) => {
