@@ -187,26 +187,34 @@ function LegendItem({ color, label }: { color: string; label: string }) {
     );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function CustomTooltip({ active, payload }: any) {
-    if (active && payload && payload.length) {
+    if (active && payload && payload.length >= 2) {
         // Accessing the 'payload' property inside the first element of the array
         const data = payload[0].payload as ChartDataPoint;
+        
+        const received = Number(payload[0].value || 0);
+        const spent = Number(payload[1].value || 0);
+        const totalBalance = received - spent;
 
         return (
             <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/10 p-5 rounded-[2rem] shadow-2xl backdrop-blur-xl">
+                {/* Header: Date */}
                 <div className="flex items-center gap-2 mb-4 border-b border-slate-50 dark:border-white/5 pb-3">
                     <Calendar size={14} className="text-slate-400" />
                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
                         {data.fullDate}
                     </span>
                 </div>
-                <div className="space-y-3">
+
+                {/* Body: Received & Spent */}
+                <div className="space-y-3 mb-4">
                     <div className="flex justify-between items-center gap-10">
                         <span className="text-xs font-bold text-emerald-500 flex items-center gap-2">
                             <ArrowDownLeft size={16} /> Received
                         </span>
                         <span className="text-base font-black text-slate-800 dark:text-white">
-                            ₹{Number(payload[0].value || 0).toLocaleString('en-IN')}
+                            ₹{received.toLocaleString('en-IN')}
                         </span>
                     </div>
                     <div className="flex justify-between items-center gap-10">
@@ -214,7 +222,19 @@ function CustomTooltip({ active, payload }: any) {
                             <ArrowUpRight size={16} /> Spent
                         </span>
                         <span className="text-base font-black text-slate-800 dark:text-white">
-                            ₹{Number(payload[1].value || 0).toLocaleString('en-IN')}
+                            ₹{spent.toLocaleString('en-IN')}
+                        </span>
+                    </div>
+                </div>
+
+                {/* Total Balance Section */}
+                <div className="pt-3 border-t border-slate-50 dark:border-white/5">
+                    <div className="flex justify-between items-center bg-slate-50 dark:bg-white/5 p-3 rounded-2xl gap-10">
+                        <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-tighter">
+                            Net Balance
+                        </span>
+                        <span className={`text-base font-black ${totalBalance >= 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-rose-600'}`}>
+                            {totalBalance < 0 ? '-' : ''}₹{Math.abs(totalBalance).toLocaleString('en-IN')}
                         </span>
                     </div>
                 </div>
