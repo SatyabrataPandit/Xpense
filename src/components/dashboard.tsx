@@ -1,30 +1,41 @@
 'use client';
 
+import { useState } from 'react';
 import { Header } from "@/components/header";
 import { AssetCards } from "@/components/asset-cards";
 import { MainChart } from "@/components/main-chart";
 import { RecentTransactions } from "@/components/recent-transactions";
 
 export function Dashboard() {
+  // Shared state for all dashboard components
+  const [filters, setFilters] = useState({
+    type: 'monthly' as 'all' | 'monthly' | 'yearly',
+    year: new Date().getFullYear().toString(),
+    month: new Date().getMonth().toString(),
+  });
+
   return (
     <main className="flex-1 w-full max-w-400 mx-auto p-6 lg:p-10 flex flex-col gap-10">
       
-      {/* Top Section: Welcome & Actions */}
-      <Header />
+      {/* Header updates the shared filters state */}
+      <Header filters={filters} setFilters={setFilters} />
       
-      {/* Middle Section: Financial Summary Cards */}
-      <AssetCards />
+      {/* AssetCards correctly receiving all filters */}
+      <AssetCards 
+        filterType={filters.type} 
+        selectedYear={filters.year} 
+        selectedMonth={filters.month} 
+      />
 
-      {/* Bottom Section: Chart and Activity List */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-10">
         <div className="lg:col-span-2">
-          <MainChart />
+          {/* FIX: Pass the full filters object so it detects year/month changes */}
+          <MainChart filters={filters} />
         </div>
         <div className="lg:col-span-1">
           <RecentTransactions />
         </div>
       </div>
-
     </main>
   );
 }

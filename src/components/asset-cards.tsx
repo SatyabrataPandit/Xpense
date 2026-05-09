@@ -1,30 +1,36 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { db, auth } from '@/lib/firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { collection, query, onSnapshot, Timestamp } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { Wallet, Landmark, TrendingUp } from "lucide-react";
 
-export function AssetCards() {
-    interface AssetData {
-        wallet?: { balance: number; credit: number; debit: number; };
-        bank?: { balance: number; credit: number; debit: number; };
-        investments?: { balance: number; profit: number; loss: number; };
-    }
+interface Transaction {
+    amount: number;
+    accountType: 'wallet' | 'bank' | 'investment'; // Changed from 'type' to 'accountType'
+    direction: 'in' | 'out';
+    date: Timestamp;
+}
 
-    const [data, setData] = useState<AssetData | null>(null);
+interface AssetCardsProps {
+    filterType: 'all' | 'monthly' | 'yearly';
+    selectedYear: string;
+    selectedMonth: string;
+}
+
+export function AssetCards({ filterType, selectedYear, selectedMonth }: AssetCardsProps) {
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Use an observer to wait for the auth state to be ready
         const authUnsub = onAuthStateChanged(auth, (user) => {
             if (user) {
-                const totalsRef = doc(db, 'users', user.uid, 'summary', 'totals');
-                const unsub = onSnapshot(totalsRef, (snapshot) => {
-                    if (snapshot.exists()) {
-                        setData(snapshot.data() as AssetData);
-                    }
+                const q = query(collection(db, 'users', user.uid, 'transactions'));
+                const unsub = onSnapshot(q, (snapshot) => {
+                    // Map data to match the Transaction interface
+                    const txs = snapshot.docs.map(doc => doc.data() as Transaction);
+                    setTransactions(txs);
                     setLoading(false);
                 });
                 return () => unsub();
@@ -32,9 +38,41 @@ export function AssetCards() {
                 setLoading(false);
             }
         });
-
         return () => authUnsub();
     }, []);
+
+    const stats = useMemo(() => {
+        const filtered = transactions.filter(tx => {
+            if (filterType === 'all') return true;
+            
+            // Safety check for date
+            if (!tx.date) return false;
+            const date = tx.date.toDate();
+            
+            const txYear = date.getFullYear().toString();
+            const txMonth = date.getMonth().toString();
+            
+            const matchesYear = txYear === selectedYear;
+            const matchesMonth = txMonth === selectedMonth;
+            
+            if (filterType === 'yearly') return matchesYear;
+            return matchesYear && matchesMonth;
+        });
+
+        const calculate = (type: 'wallet' | 'bank' | 'investment') => {
+            // Filter by accountType to match your Firestore structure
+            const group = filtered.filter(t => t.accountType === type);
+            const credit = group.filter(t => t.direction === 'in').reduce((s, t) => s + t.amount, 0);
+            const debit = group.filter(t => t.direction === 'out').reduce((s, t) => s + t.amount, 0);
+            return { balance: credit - debit, credit, debit };
+        };
+
+        return {
+            wallet: calculate('wallet'),
+            bank: calculate('bank'),
+            investments: calculate('investment')
+        };
+    }, [transactions, filterType, selectedYear, selectedMonth]);
 
     if (loading) {
         return (
@@ -47,44 +85,35 @@ export function AssetCards() {
     }
 
     const assets = [
-        {
-            title: "Wallet",
-            balance: data?.wallet?.balance || 0,
-            in: data?.wallet?.credit || 0,
-            out: data?.wallet?.debit || 0,
-            profit: 0,
-            loss: 0,
-            icon: Wallet, color: "emerald"
+        { 
+            title: "Wallet", 
+            data: stats.wallet, 
+            icon: Wallet, 
+            bg: "bg-indigo-50 dark:bg-indigo-900/20", 
+            text: "text-indigo-600 dark:text-indigo-400" 
         },
-        {
-            title: "Bank Account",
-            balance: data?.bank?.balance || 0,
-            in: data?.bank?.credit || 0,
-            out: data?.bank?.debit || 0,
-            profit: 0,
-            loss: 0,
-            icon: Landmark, color: "emerald"
+        { 
+            title: "Bank Account", 
+            data: stats.bank, 
+            icon: Landmark, 
+            bg: "bg-emerald-50 dark:bg-emerald-900/20", 
+            text: "text-emerald-600 dark:text-emerald-400" 
         },
-        {
-            title: "Investments",
-            balance: data?.investments?.balance || 0,
-            in: 0,
-            out: 0,
-            profit: data?.investments?.profit || 0,
-            loss: data?.investments?.loss || 0,
-            icon: TrendingUp, color: "emerald"
+        { 
+            title: "Investments", 
+            data: stats.investments, 
+            icon: TrendingUp, 
+            bg: "bg-amber-50 dark:bg-amber-900/20", 
+            text: "text-amber-600 dark:text-amber-400" 
         }
     ];
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {assets.map((asset) => (
-                <div 
-                    key={asset.title} 
-                    className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm transition-all group"
-                >
+                <div key={asset.title} className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm transition-all hover:shadow-md group">
                     <div className="flex justify-between items-start mb-8">
-                        <div className={`p-4 rounded-2xl bg-${asset.color}-50 dark:bg-${asset.color}-900/20 text-${asset.color}-600 dark:text-${asset.color}-400`}>
+                        <div className={`p-4 rounded-2xl ${asset.bg} ${asset.text}`}>
                             <asset.icon size={28} />
                         </div>
                         <span className="text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.3em]">
@@ -92,25 +121,25 @@ export function AssetCards() {
                         </span>
                     </div>
 
-                    <h2 className="text-4xl font-black text-slate-800 dark:text-slate-100 mb-8">
-                        ₹{asset.balance.toLocaleString('en-IN')}
+                    <h2 className="text-4xl font-black text-slate-800 dark:text-slate-100 mb-8 tracking-tighter">
+                        ₹{asset.data.balance.toLocaleString('en-IN')}
                     </h2>
 
                     <div className="flex gap-6 border-t border-slate-50 dark:border-slate-800 pt-6">
                         <div className="flex-1">
                             <p className="text-[9px] text-slate-400 dark:text-slate-500 uppercase font-black mb-1">
-                                {asset.title === "Investments" ? 'Profit' : 'Credit'}
+                                {asset.title === "Investments" ? 'Inflow' : 'Credit'}
                             </p>
-                            <p className="text-sm font-bold text-emerald-500">
-                                ₹{(asset.title === "Investments" ? asset.profit : asset.in).toLocaleString('en-IN')}
+                            <p className="text-sm font-bold text-emerald-500 tracking-tight">
+                                ₹{asset.data.credit.toLocaleString('en-IN')}
                             </p>
                         </div>
                         <div className="flex-1 border-l border-slate-100 dark:border-slate-800 pl-6">
                             <p className="text-[9px] text-slate-400 dark:text-slate-500 uppercase font-black mb-1">
-                                {asset.title === "Investments" ? 'Loss' : 'Debit'}
+                                {asset.title === "Investments" ? 'Outflow' : 'Debit'}
                             </p>
-                            <p className="text-sm font-bold text-rose-500">
-                                ₹{(asset.title === "Investments" ? asset.loss : asset.out).toLocaleString('en-IN')}
+                            <p className="text-sm font-bold text-rose-500 tracking-tight">
+                                ₹{asset.data.debit.toLocaleString('en-IN')}
                             </p>
                         </div>
                     </div>
