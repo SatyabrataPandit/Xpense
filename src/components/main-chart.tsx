@@ -4,9 +4,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { db, auth } from '@/lib/firebase';
 import { collection, query, orderBy, onSnapshot, where, Timestamp } from 'firebase/firestore';
 import {
-    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, TooltipProps
+    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
-import { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent';
 import { Activity, Calendar, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 
 // --- Interfaces ---
@@ -31,7 +30,7 @@ interface MainChartProps {
     };
 }
 
-interface ChartPayload {
+interface ChartDataPoint {
     dateLabel: string;
     fullDate: string;
     income: number;
@@ -188,11 +187,10 @@ function LegendItem({ color, label }: { color: string; label: string }) {
     );
 }
 
-function CustomTooltip({ active, payload }: TooltipProps<ValueType, NameType>) {
-    // TypeScript check: Ensure active is true and payload exists with data
+function CustomTooltip({ active, payload }: any) {
     if (active && payload && payload.length) {
-        // We cast the payload item to our interface for type safety
-        const data = payload[0].payload as ChartPayload;
+        // Accessing the 'payload' property inside the first element of the array
+        const data = payload[0].payload as ChartDataPoint;
 
         return (
             <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/10 p-5 rounded-[2rem] shadow-2xl backdrop-blur-xl">
@@ -208,7 +206,7 @@ function CustomTooltip({ active, payload }: TooltipProps<ValueType, NameType>) {
                             <ArrowDownLeft size={16} /> Received
                         </span>
                         <span className="text-base font-black text-slate-800 dark:text-white">
-                            ₹{Number(payload[0].value).toLocaleString('en-IN')}
+                            ₹{Number(payload[0].value || 0).toLocaleString('en-IN')}
                         </span>
                     </div>
                     <div className="flex justify-between items-center gap-10">
@@ -216,7 +214,7 @@ function CustomTooltip({ active, payload }: TooltipProps<ValueType, NameType>) {
                             <ArrowUpRight size={16} /> Spent
                         </span>
                         <span className="text-base font-black text-slate-800 dark:text-white">
-                            ₹{Number(payload[1].value).toLocaleString('en-IN')}
+                            ₹{Number(payload[1].value || 0).toLocaleString('en-IN')}
                         </span>
                     </div>
                 </div>
