@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { auth } from '@/lib/firebase';
 import { User } from 'firebase/auth';
 import { updateProfile, updatePassword, deleteUser } from 'firebase/auth';
+import { FirebaseError } from 'firebase/app'; // Ensure this is imported
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,16 +44,23 @@ export function ProfileModal({
     const [isUpdating, setIsUpdating] = useState(false);
 
     const handleUpdateName = async () => {
-        setIsUpdating(true);
-        try {
-            await updateProfile(auth.currentUser!, { displayName: newName });
-            toast.success("Identity Updated");
-        } catch (error: FirebaseError) {
+    if (!auth.currentUser) return; // Guard clause for safety
+
+    setIsUpdating(true);
+    try {
+        await updateProfile(auth.currentUser, { displayName: newName });
+        toast.success("Identity Updated");
+    } catch (error: unknown) { // Use unknown or any here
+        // This check removes the red line and provides autocompletion
+        if (error instanceof FirebaseError) {
             toast.error("Update failed", { description: error.message });
-        } finally {
-            setIsUpdating(false);
+        } else {
+            toast.error("An unexpected error occurred");
         }
-    };
+    } finally {
+        setIsUpdating(false);
+    }
+};
 
     const handleChangePassword = async () => {
         const currentUser = auth.currentUser;
