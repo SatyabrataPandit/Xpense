@@ -31,6 +31,13 @@ interface MainChartProps {
     };
 }
 
+interface ChartPayload {
+    dateLabel: string;
+    fullDate: string;
+    income: number;
+    expense: number;
+}
+
 export function MainChart({ filters }: MainChartProps) {
     const [data, setData] = useState<DataPoint[]>([]);
     const [loading, setLoading] = useState(true);
@@ -182,13 +189,17 @@ function LegendItem({ color, label }: { color: string; label: string }) {
 }
 
 function CustomTooltip({ active, payload }: TooltipProps<ValueType, NameType>) {
+    // TypeScript check: Ensure active is true and payload exists with data
     if (active && payload && payload.length) {
+        // We cast the payload item to our interface for type safety
+        const data = payload[0].payload as ChartPayload;
+
         return (
             <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/10 p-5 rounded-[2rem] shadow-2xl backdrop-blur-xl">
                 <div className="flex items-center gap-2 mb-4 border-b border-slate-50 dark:border-white/5 pb-3">
                     <Calendar size={14} className="text-slate-400" />
                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                        {payload[0].payload.fullDate}
+                        {data.fullDate}
                     </span>
                 </div>
                 <div className="space-y-3">
