@@ -6,7 +6,6 @@ import { collection, query, onSnapshot, Timestamp } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { Wallet, Landmark, TrendingUp, CircleDollarSign } from "lucide-react";
 
-// ... (Interfaces remain the same)
 interface Transaction {
     amount: number;
     accountType: 'wallet' | 'bank' | 'investment';
@@ -15,12 +14,13 @@ interface Transaction {
 }
 
 interface AssetCardsProps {
-    filterType: 'all' | 'monthly' | 'yearly';
+    filterType: 'all' | 'monthly' | 'yearly' | 'daily'; // Added 'daily'
     selectedYear: string;
     selectedMonth: string;
+    selectedDate: string; // Added selectedDate (YYYY-MM-DD)
 }
 
-export function AssetCards({ filterType, selectedYear, selectedMonth }: AssetCardsProps) {
+export function AssetCards({ filterType, selectedYear, selectedMonth, selectedDate }: AssetCardsProps) {
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -45,13 +45,25 @@ export function AssetCards({ filterType, selectedYear, selectedMonth }: AssetCar
         const filtered = transactions.filter(tx => {
             if (filterType === 'all') return true;
             if (!tx.date) return false;
+            
             const date = tx.date.toDate();
+            
+            // Daily Logic: Compare YYYY-MM-DD strings
+            if (filterType === 'daily') {
+                const txDateString = date.toISOString().split('T')[0];
+                return txDateString === selectedDate;
+            }
+
             const txYear = date.getFullYear().toString();
             const txMonth = date.getMonth().toString();
+            
             const matchesYear = txYear === selectedYear;
             const matchesMonth = txMonth === selectedMonth;
+            
             if (filterType === 'yearly') return matchesYear;
-            return matchesYear && matchesMonth;
+            if (filterType === 'monthly') return matchesYear && matchesMonth;
+            
+            return true;
         });
 
         const calculate = (type: 'wallet' | 'bank' | 'investment') => {
@@ -64,17 +76,10 @@ export function AssetCards({ filterType, selectedYear, selectedMonth }: AssetCar
         const wallet = calculate('wallet');
         const bank = calculate('bank');
         const investments = calculate('investment');
-
-        // New calculation for Net Total
         const netTotal = wallet.balance + bank.balance + investments.balance;
 
-        return {
-            wallet,
-            bank,
-            investments,
-            netTotal
-        };
-    }, [transactions, filterType, selectedYear, selectedMonth]);
+        return { wallet, bank, investments, netTotal };
+    }, [transactions, filterType, selectedYear, selectedMonth, selectedDate]);
 
     if (loading) {
         return (
@@ -95,13 +100,20 @@ export function AssetCards({ filterType, selectedYear, selectedMonth }: AssetCar
         { title: "Investments", data: stats.investments, icon: TrendingUp, bg: "bg-amber-50 dark:bg-amber-900/20", text: "text-amber-600 dark:text-amber-400" }
     ];
 
+    // Helper to format the display text in the badge
+    const getBadgeText = () => {
+        if (filterType === 'all') return 'All Time';
+        if (filterType === 'daily') return new Date(selectedDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        if (filterType === 'yearly') return `FY ${selectedYear}`;
+        const monthName = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][parseInt(selectedMonth)];
+        return `${monthName} ${selectedYear}`;
+    };
+
     return (
         <div className="space-y-6">
             {/* 1. Net Balance Highlight Card */}
             <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row justify-between items-center group relative overflow-hidden">
-
                 <div className="relative z-10 flex items-center gap-6">
-                    {/* Icon Container - Now using the Indigo theme to stand out */}
                     <div className="p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400">
                         <CircleDollarSign size={32} />
                     </div>
@@ -115,10 +127,9 @@ export function AssetCards({ filterType, selectedYear, selectedMonth }: AssetCar
                     </div>
                 </div>
 
-                {/* Filter Badge - Reverted to slate borders */}
                 <div className="mt-6 md:mt-0 relative z-10 px-6 py-2 rounded-full border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
                     <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">
-                        {filterType === 'all' ? 'All Time' : filterType === 'yearly' ? `FY ${selectedYear}` : `${selectedMonth}/${selectedYear}`}
+                        {getBadgeText()}
                     </span>
                 </div>
             </div>

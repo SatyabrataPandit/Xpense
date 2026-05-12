@@ -12,6 +12,7 @@ export function Dashboard() {
     type: 'monthly' as 'all' | 'monthly' | 'yearly',
     year: new Date().getFullYear().toString(),
     month: new Date().getMonth().toString(),
+    date: new Date().toISOString().split('T')[0] // Important: Set initial date to today
   });
 
   return (
@@ -25,6 +26,7 @@ export function Dashboard() {
         filterType={filters.type} 
         selectedYear={filters.year} 
         selectedMonth={filters.month} 
+        selectedDate={filters.date}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-10">
