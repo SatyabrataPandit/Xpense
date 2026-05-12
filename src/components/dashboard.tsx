@@ -9,7 +9,7 @@ import { RecentTransactions } from "@/components/recent-transactions";
 export function Dashboard() {
   // Shared state for all dashboard components
   const [filters, setFilters] = useState({
-    type: 'monthly' as 'all' | 'monthly' | 'yearly',
+    type: 'monthly' as 'all' | 'monthly' | 'yearly' | 'daily',
     year: new Date().getFullYear().toString(),
     month: new Date().getMonth().toString(),
     date: new Date().toISOString().split('T')[0] // Important: Set initial date to today
